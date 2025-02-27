@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera Dashboard</title>
+    <link rel="stylesheet" href="../STYLES/styles.css">
+    <link rel="stylesheet" href="camera.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <h2>🌿</h2>
+            <nav>
+                <ul>
+                    <li>
+                        <a href="index.html">
+                            <i class="fas fa-tachometer-alt"></i>
+                            <span>Dashboard</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="predictive.html">
+                            <i class="fas fa-chart-line"></i>
+                            <span>Predictive</span>
+                        </a>
+                    </li>
+                    <li class="active">
+                        <a href="camera.html">
+                            <i class="fas fa-camera"></i>
+                            <span>Camera</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="settings.html">
+                            <i class="fas fa-cog"></i>
+                            <span>Settings</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="alerts.html">
+                            <i class="fas fa-bell"></i>
+                            <span>Alerts</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="about.html">
+                            <i class="fas fa-info-circle"></i>
+                            <span>About</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" id="logout-button">
+                            <i class="fas fa-sign-out-alt"></i>
+                            <span>Logout</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+        <div class="main-content camera-page">
+            <section class="recent-photos">
+                <div class="camera-header">
+                    <h1>Azolla Growth Monitoring</h1>
+                    <p>Visual record of your Azolla cultivation captured by ESP32-CAM</p>
+                </div>
+                <div id="photos"></div>
+                <div class="loading-indicator">Loading latest images...</div>
+            </section>
+        </div>
+    </div>
+
+   
+    <div class="lightbox-modal" id="lightboxModal">
+        <span class="close-lightbox">&times;</span>
+        <div class="lightbox-content">
+            <img class="lightbox-image" id="lightboxImage" src="" alt="Enlarged view">
+        </div>
+        <a class="lightbox-nav prev-btn" id="prevBtn">&#10094;</a>
+        <a class="lightbox-nav next-btn" id="nextBtn">&#10095;</a>
+    </div>
+
+    <script>
+        const loadImages = () => {
+            fetch('../BACKEND/load_images.php')
+                .then(response => response.json())
+                .then(data => {
+                    const photosDiv = document.getElementById('photos');
+                    photosDiv.innerHTML = '';
+                    
+                    data.forEach((image, index) => {
+                        const photoCard = document.createElement('div');
+                        photoCard.className = 'photo-card';
+                        
+                        const img = document.createElement('img');
+                        img.src = `http://192.168.40.182/SmartHarvest/AZOLLA_PHOTOS/${image.filename}?t=${Date.now()}`;
+                        img.alt = `Azolla capture - ${image.timestamp}`;
+                        img.dataset.index = index;
+                        img.dataset.src = image.filename;
+                        img.addEventListener('click', () => openLightbox(index, data));
+
+                        const controls = document.createElement('div');
+                        controls.className = 'photo-controls';
+                        
+                        const deleteButton = document.createElement('button');
+                        deleteButton.className = 'delete-btn';
+                        deleteButton.innerHTML = '<i class="fas fa-trash"></i><span>Delete</span>';
+                        deleteButton.onclick = () => deleteImage(image.filename, photoCard);
+                        
+                        controls.appendChild(deleteButton);
+                        photoCard.appendChild(img);
+                        photoCard.appendChild(controls);
+                        photosDiv.appendChild(photoCard);
+                    });
+                    
+                    document.querySelector('.loading-indicator').style.display = 
+                        data.length ? 'none' : 'block';
+                })
+                .catch(error => console.error('Error loading images:', error));
+        };
+
+const deleteImage = (filename, imgContainer) => {
+    fetch(`../BACKEND/delete_image.php?id=${encodeURIComponent(filename)}`, { 
+        method: 'POST'
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => Promise.reject(err));
+        }
+        return response.json();
+    })
+    .then(data => {
+    if(data.success) {
+        imgContainer.classList.add('deleting');
+        setTimeout(() => imgContainer.remove(), 500); 
+        showToast('Image deleted successfully');
+    }
+})
+    .catch(error => {
+        console.error('Delete error:', error);
+        alert(`Delete failed: ${error.error || 'Unknown error'}`);
+    });
+    
+};
+        
+        let currentImageIndex = 0;
+        let imagesData = [];
+        const lightboxModal = document.getElementById('lightboxModal');
+        const lightboxImage = document.getElementById('lightboxImage');
+
+        function openLightbox(index, data) {
+            currentImageIndex = index;
+            imagesData = data;
+            updateLightboxImage();
+            lightboxModal.style.display = 'flex';
+        }
+
+        function updateLightboxImage() {
+            const originalSrc = `http://192.168.40.182/SmartHarvest/AZOLLA_PHOTOS/${imagesData[currentImageIndex].filename}`;
+            lightboxImage.src = originalSrc;
+        }
+
+        function navigate(direction) {
+            currentImageIndex += direction;
+            if (currentImageIndex >= imagesData.length) currentImageIndex = 0;
+            if (currentImageIndex < 0) currentImageIndex = imagesData.length - 1;
+            updateLightboxImage();
+        }
+
+function showToast(message) {
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => toast.remove(), 3000);
+}
+
+       
+        document.querySelector('.close-lightbox').addEventListener('click', () => {
+            lightboxModal.style.display = 'none';
+        });
+
+        window.addEventListener('click', (event) => {
+            if (event.target === lightboxModal) {
+                lightboxModal.style.display = 'none';
+            }
+        });
+
+        document.getElementById('prevBtn').addEventListener('click', () => navigate(-1));
+        document.getElementById('nextBtn').addEventListener('click', () => navigate(1));
+
+        document.addEventListener('keydown', (e) => {
+            if (lightboxModal.style.display === 'flex') {
+                if (e.key === 'ArrowLeft') navigate(-1);
+                if (e.key === 'ArrowRight') navigate(1);
+                if (e.key === 'Escape') lightboxModal.style.display = 'none';
+            }
+        });
+
+        
+        loadImages();
+        setInterval(loadImages, 60000);
+
+        document.getElementById('logout-button').addEventListener('click', function(event) {
+            event.preventDefault();
+            window.location.href = '../BACKEND/logout.php';
+        });
+    </script>
+</body>
+</html>

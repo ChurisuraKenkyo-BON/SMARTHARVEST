@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alerts</title>
+    <link rel="stylesheet" href="../STYLES/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <h2>🌿</h2>
+            <nav>
+                <ul>
+                    <li>
+                        <a href="index.html">
+                            <i class="fas fa-tachometer-alt"></i>
+                            <span>Dashboard</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="predictive.html">
+                            <i class="fas fa-chart-line"></i>
+                            <span>Predictive</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="camera.html">
+                            <i class="fas fa-camera"></i>
+                            <span>Camera</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="settings.html">
+                            <i class="fas fa-cog"></i>
+                            <span>Settings</span>
+                        </a>
+                    </li>
+                    <li class="active">
+                        <a href="alerts.html">
+                            <i class="fas fa-bell"></i>
+                            <span>Alerts</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="about.html">
+                            <i class="fas fa-info-circle"></i>
+                            <span>About</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" id="logout-button">
+                            <i class="fas fa-sign-out-alt"></i>
+                            <span>Logout</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+        <div class="main-content">
+            <header>
+                <h1>Alerts</h1>
+                <p>Stay updated with the latest alerts and notifications about your Azolla farming system.</p>
+            </header>
+            <section class="alerts" id="alerts">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date & Time</th>
+                            <th>Parameter</th>
+                            <th>Sensor Data</th>
+                            <th>Thresholds Breached</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="alert-rows">
+                      
+                    </tbody>
+                </table>
+            </section>
+
+           
+            <section class="maintenance-tips" id="maintenance-tips">
+                <h2>Maintenance Tips</h2>
+                <p id="tips-message">No breached thresholds detected. All conditions are optimal.</p>
+                <ul id="tips-list"></ul>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        const fetchAlerts = () => {
+            fetch('../BACKEND/fetch_alerts.php')
+                .then(response => response.json())
+                .then(data => {
+                    console.log("Fetched alerts data:", data); 
+                    const alertRows = document.getElementById('alert-rows');
+                    alertRows.innerHTML = ''; 
+
+                    const tipsList = document.getElementById('tips-list');
+                    tipsList.innerHTML = ''; 
+                    const tipsMessage = document.getElementById('tips-message');
+
+                    if (data.alerts.length > 0) {
+                        data.alerts.forEach(alert => {
+                            console.log("Alert:", alert); 
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${alert.datetime}</td>
+                                <td>${alert.parameter}</td>
+                                <td>${alert.sensor_value}</td>
+                                <td>Breached ${alert.breached_threshold}</td>
+                                <td><button onclick="markSolved(${alert.id})">Solved</button></td>
+                            `;
+                            alertRows.appendChild(row);
+
+                            
+                            const tip = getMaintenanceTip(alert.parameter, alert.breached_threshold);
+                            if (tip) {
+                                const tipItem = document.createElement('li');
+                                tipItem.textContent = tip;
+                                tipsList.appendChild(tipItem);
+                            }
+                        });
+
+                        if (tipsList.children.length > 0) {
+                            tipsMessage.textContent = "Here are some maintenance tips based on the breached thresholds:";
+                        } else {
+                            tipsMessage.textContent = "No specific maintenance tips for the breached thresholds.";
+                        }
+                    } else {
+                        const row = document.createElement('tr');
+                        row.innerHTML = '<td colspan="5">No alerts. All sensor values are within the safe range.</td>';
+                        alertRows.appendChild(row);
+
+                        tipsMessage.textContent = "No breached thresholds detected. All conditions are optimal.";
+                    }
+                })
+                .catch(error => console.error('Error fetching alerts:', error));
+        };
+
+        
+        const getMaintenanceTip = (parameter, breachedThreshold) => {
+            
+            parameter = parameter.toLowerCase();
+
+           
+            breachedThreshold = breachedThreshold.toLowerCase();
+            if (breachedThreshold === "min") breachedThreshold = "low";
+            if (breachedThreshold === "max") breachedThreshold = "high";
+
+            const tips = {
+                humidity: {
+                    high: "Reduce water levels or improve ventilation to lower humidity.",
+                    low: "Increase water levels or mist the area to raise humidity."
+                },
+                temperature: {
+                    high: "Provide shade or increase ventilation to cool down the environment.",
+                    low: "Use a heater or insulate the area to raise the temperature."
+                },
+                tds: {
+                    high: "Dilute the water with fresh water to lower TDS levels.",
+                    low: "Add nutrients or fertilizers to increase TDS levels."
+                },
+                ph: {
+                    high: "Add a pH buffer or acidic solution to lower the pH.",
+                    low: "Add a pH buffer or alkaline solution to raise the pH."
+                }
+            };
+
+            if (tips[parameter] && tips[parameter][breachedThreshold]) {
+                return tips[parameter][breachedThreshold];
+            }
+            return null;
+        };
+
+        const markSolved = (id) => {
+            fetch(`../BACKEND/mark_solved.php?id=${id}`, { method: 'POST' })
+                .then(() => {
+                    location.reload();
+                })
+                .catch(error => console.error('Error marking alert as solved:', error));
+        };
+
+        
+        fetchAlerts();
+
+        
+        setInterval(fetchAlerts, 15000);
+
+        
+        document.getElementById('logout-button').addEventListener('click', function(event) {
+            event.preventDefault(); 
+            window.location.href = '../BACKEND/logout.php'; 
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Azolla Dashboard</title>
+    <link rel="stylesheet" href="../STYLES/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <h2>🌿</h2>
+            <nav>
+                <ul>
+                    <li class="active">
+                        <a href="index.html">
+                            <i class="fas fa-tachometer-alt"></i>
+                            <span>Dashboard</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="predictive.html">
+                            <i class="fas fa-chart-line"></i>
+                            <span>Predictive</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="camera.html">
+                            <i class="fas fa-camera"></i>
+                            <span>Camera</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="settings.html">
+                            <i class="fas fa-cog"></i>
+                            <span>Settings</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="alerts.html">
+                            <i class="fas fa-bell"></i>
+                            <span>Alerts</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="about.html">
+                            <i class="fas fa-info-circle"></i>
+                            <span>About</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" id="logout-button">
+                            <i class="fas fa-sign-out-alt"></i>
+                            <span>Logout</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+        <div class="main-content">
+            <header>
+                <h1>Welcome to Smart Harvest Dashboard</h1>
+                <p>Your hub for real-time monitoring of Azolla farming.</p>
+                <p>Last updated: <span id="last-updated">Loading...</span></p>
+            </header>
+            <section class="metrics">
+                <div class="metric">
+                    <i class="fas fa-tint"></i> 
+                    <h2>Humidity</h2>
+                    <p>Current: <span id="humidity">--</span>%</p>
+                    <p>Threshold: <span id="humidity-threshold">--</span></p>
+                </div>
+                <div class="metric">
+                    <i class="fas fa-thermometer-half"></i> 
+                    <h2>Temperature</h2>
+                    <p>Current: <span id="temperature">--</span>°C</p>
+                    <p>Threshold: <span id="temperature-threshold">--</span></p>
+                </div>
+                <div class="metric">
+                    <i class="fas fa-flask"></i> 
+                    <h2>TDS</h2>
+                    <p>Current: <span id="tds">--</span> PPM</p>
+                    <p>Threshold: <span id="tds-threshold">--</span></p>
+                </div>
+                <div class="metric">
+                    <i class="fas fa-water"></i> 
+                    <h2>pH</h2>
+                    <p>Current: <span id="ph">--</span></p>
+                    <p>Threshold: <span id="ph-threshold">--</span></p>
+                </div>
+            </section>
+            <div class="refresh-button-container">
+                <button onclick="fetchData()">Refresh Data</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const fetchData = () => {
+            fetch('../BACKEND/fetch_data.php')
+                .then(response => response.json())
+                .then(data => {
+                    console.log("Data received from backend:", data); 
+                    if (data.error) {
+                        alert(data.error);
+                    } else {
+                        
+                        updateSensorDisplay('humidity', data.humidity);
+                        updateSensorDisplay('temperature', data.temperature);
+                        updateSensorDisplay('tds', data.tds);
+                        updateSensorDisplay('ph', data.ph);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching data:', error);
+                    alert('Failed to load sensor data. Please try again later.');
+                });
+
+            
+            fetch('../BACKEND/fetch_settings.php')
+                .then(response => response.json())
+                .then(settings => {
+                    if (settings.error) {
+                        alert(settings.error);
+                    } else {
+                        
+                        settings.forEach(setting => {
+                            const parameter = setting.parameter.toLowerCase();
+                            const thresholdElement = document.getElementById(`${parameter}-threshold`);
+                            if (thresholdElement) {
+                                thresholdElement.textContent = `${setting.min_value} - ${setting.max_value}`;
+                            }
+                        });
+                    }
+                })
+                .catch(error => console.error('Error fetching thresholds:', error));
+
+          
+            updateTimestamp();
+        };
+
+        const updateSensorDisplay = (elementId, value) => {
+            const element = document.getElementById(elementId);
+            element.textContent = value; 
+        };
+
+        const updateTimestamp = () => {
+            const now = new Date();
+            const formattedTime = now.toLocaleTimeString();
+            document.getElementById('last-updated').textContent = formattedTime;
+        };
+
+       
+        fetchData();
+
+        
+        setInterval(fetchData, 10000);
+
+        
+        document.getElementById('logout-button').addEventListener('click', function(event) {
+            event.preventDefault(); 
+            window.location.href = '../BACKEND/logout.php'; 
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Predictive Analysis Dashboard</title>
+    <link rel="stylesheet" href="../STYLES/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <h2>🌿</h2>
+            <nav>
+                <ul>
+                    <li>
+                        <a href="index.html">
+                            <i class="fas fa-tachometer-alt"></i>
+                            <span>Dashboard</span>
+                        </a>
+                    </li>
+                    <li class="active">
+                        <a href="predictive.html">
+                            <i class="fas fa-chart-line"></i>
+                            <span>Predictive</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="camera.html">
+                            <i class="fas fa-camera"></i>
+                            <span>Camera</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="settings.html">
+                            <i class="fas fa-cog"></i>
+                            <span>Settings</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="alerts.html">
+                            <i class="fas fa-bell"></i>
+                            <span>Alerts</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="about.html">
+                            <i class="fas fa-info-circle"></i>
+                            <span>About</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" id="logout-button">
+                            <i class="fas fa-sign-out-alt"></i>
+                            <span>Logout</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+        <div class="main-content">
+            <header>
+                <h1>Azolla Prediction Tab</h1>
+                <p>Get insights on when your Azolla is ready for harvest based on predictive analytics.</p>
+            </header>
+            <section class="harvest-status">
+                <div class="harvest-icon">
+                    <i id="harvest-icon" class="fas fa-seedling"></i> 
+                </div>
+                <h2>Harvest Status: <span id="harvest-status">Loading...</span></h2>
+                <p id="harvest-message">Checking conditions...</p>
+            </section>
+            <section class="additional-features">
+               
+                <a href="index.html" class="feature">
+                    <i class="fas fa-chart-bar"></i>
+                    <h3>Growth Trends</h3>
+                    <p>View historical growth data and trends.</p>
+                </a>
+            
+                
+                <a href="alerts.html" class="feature">
+                    <i class="fas fa-tools"></i>
+                    <h3>Maintenance Tips</h3>
+                    <p>Get tips for maintaining optimal conditions.</p>
+                </a>
+            </section>
+            <div class="predict-button-container">
+                <button onclick="window.location.href='http://localhost/SmartHarvest/AI_AND_WEB/web/index.html'">Predict Now</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const fetchPredictiveData = () => {
+            fetch('../BACKEND/fetch_predictive_data.php')
+                .then(response => response.json())
+                .then(data => {
+                    console.log("Predictive data received:", data);
+
+                   
+                    const isHarvestable = data.isHarvestable;
+                    const harvestStatusElement = document.getElementById('harvest-status');
+                    const harvestIconElement = document.getElementById('harvest-icon');
+                    const harvestMessageElement = document.getElementById('harvest-message');
+
+                    if (isHarvestable) {
+                        harvestStatusElement.textContent = "Harvestable";
+                        harvestStatusElement.style.color = "#48bb78"; 
+                        harvestIconElement.className = "fas fa-tractor"; 
+                        harvestIconElement.style.color = "#48bb78"; 
+                        harvestMessageElement.textContent = "Your Azolla is ready for harvest!";
+                    } else {
+                        harvestStatusElement.textContent = "Not Harvestable";
+                        harvestStatusElement.style.color = "#e53e3e"; 
+                        harvestIconElement.className = "fas fa-seedling"; 
+                        harvestIconElement.style.color = "#e53e3e"; 
+                        harvestMessageElement.textContent = "Your Azolla needs more time to grow.";
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching predictive data:', error);
+                    document.getElementById('harvest-status').textContent = "Error loading status";
+                    document.getElementById('harvest-message').textContent = "Unable to fetch data. Please try again later.";
+                });
+        };
+
+        
+        fetchPredictiveData();
+
+        
+        setInterval(fetchPredictiveData, 30000);
+
+        
+        document.getElementById('logout-button').addEventListener('click', function(event) {
+            event.preventDefault(); 
+            window.location.href = '../BACKEND/logout.php'; 
+        });
+    </script>
+</body>
+</html>

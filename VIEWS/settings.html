@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings Dashboard</title>
+    <link rel="stylesheet" href="../STYLES/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <h2>🌿</h2>
+            <nav>
+                <ul>
+                    <li>
+                        <a href="index.html">
+                            <i class="fas fa-tachometer-alt"></i>
+                            <span>Dashboard</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="predictive.html">
+                            <i class="fas fa-chart-line"></i>
+                            <span>Predictive</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="camera.html">
+                            <i class="fas fa-camera"></i>
+                            <span>Camera</span>
+                        </a>
+                    </li>
+                    <li class="active">
+                        <a href="settings.html">
+                            <i class="fas fa-cog"></i>
+                            <span>Settings</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="alerts.html">
+                            <i class="fas fa-bell"></i>
+                            <span>Alerts</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="about.html">
+                            <i class="fas fa-info-circle"></i>
+                            <span>About</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" id="logout-button">
+                            <i class="fas fa-sign-out-alt"></i>
+                            <span>Logout</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+        <div class="main-content">
+            <header>
+                <h1>Threshold Editor</h1>
+                <p>Adjust the thresholds for various parameters to optimize your Azolla farming system.</p>
+            </header>
+            <section class="thresholds" id="thresholds">
+                
+            </section>
+            <button onclick="updateAllThresholds()">UPDATE ALL</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+    fetch('../BACKEND/fetch_settings.php')
+        .then(response => response.json())
+        .then(settings => {
+            if (settings.error) {
+                alert(settings.error);
+            } else {
+                const thresholdsContainer = document.getElementById('thresholds');
+                settings.forEach(setting => {
+                    const parameter = setting.parameter.toLowerCase();
+                    const thresholdDiv = document.createElement('div');
+                    thresholdDiv.className = 'threshold';
+
+                   
+                    let iconClass = '';
+                    switch (parameter) {
+                        case 'humidity':
+                            iconClass = 'fas fa-tint'; 
+                            break;
+                        case 'temperature':
+                            iconClass = 'fas fa-thermometer-half'; 
+                            break;
+                        case 'tds':
+                            iconClass = 'fas fa-flask'; 
+                            break;
+                        case 'ph':
+                            iconClass = 'fas fa-water';
+                            break;
+                        default:
+                            iconClass = 'fas fa-cog'; 
+                    }
+
+                    thresholdDiv.innerHTML = `
+                        <div class="threshold-header">
+                            <i class="${iconClass}"></i>
+                            <h2>${setting.parameter.toUpperCase()}</h2>
+                        </div>
+                        <div class="input-group">
+                            <label for="${parameter}_min">MIN:</label>
+                            <input type="number" value="${setting.min_value}" id="${parameter}_min">
+                        </div>
+                        <div class="input-group">
+                            <label for="${parameter}_max">MAX:</label>
+                            <input type="number" value="${setting.max_value}" id="${parameter}_max">
+                        </div>
+                    `;
+                    thresholdsContainer.appendChild(thresholdDiv);
+                });
+            }
+        })
+        .catch(error => console.error('Error fetching settings:', error));
+});
+        function updateAllThresholds() {
+            console.log("Update All button clicked");
+            const settings = [];
+            document.querySelectorAll('.threshold').forEach(threshold => {
+                const parameter = threshold.querySelector('h2').innerText.toLowerCase();
+                const minInput = document.getElementById(`${parameter}_min`);
+                const maxInput = document.getElementById(`${parameter}_max`);
+                
+                if (minInput && maxInput) {
+                    const min_value = minInput.value;
+                    const max_value = maxInput.value;
+                    settings.push({ parameter, min_value, max_value });
+                } else {
+                    console.error(`Missing input fields for parameter: ${parameter}`);
+                }
+            });
+
+            console.log("Data to be sent:", settings);
+
+            fetch('../BACKEND/update_settings.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(settings)
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log("Server response:", data);
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    alert(data.success);
+                }
+            })
+            .catch(error => console.error('Error updating settings:', error));
+            
+        }
+        
+        
+        document.getElementById('logout-button').addEventListener('click', function(event) {
+            event.preventDefault(); 
+            window.location.href = '../BACKEND/logout.php'; 
+        });
+    </script>
+</body>
+</html>
