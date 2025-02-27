@@ -1,0 +1,85 @@
+import tensorflow as tf
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras import layers, models
+from tensorflow.keras.callbacks import ReduceLROnPlateau, EarlyStopping, ModelCheckpoint
+import os
+
+train_dir = r'E:/Azolla pics/train_data'
+validation_dir = r'E:/Azolla pics/validation_Data'
+
+img_height, img_width = 150, 150
+batch_size = 32
+
+train_datagen = ImageDataGenerator(
+    rescale=1./255,
+    rotation_range=20,
+    width_shift_range=0.2,
+    height_shift_range=0.2,
+    shear_range=0.2,
+    zoom_range=0.2,
+    horizontal_flip=True,
+    fill_mode='nearest'
+)
+
+validation_datagen = ImageDataGenerator(rescale=1./255)
+
+train_generator = train_datagen.flow_from_directory(
+    train_dir,
+    target_size=(img_height, img_width),
+    batch_size=batch_size,
+    class_mode='binary'  
+)
+
+validation_generator = validation_datagen.flow_from_directory(
+    validation_dir,
+    target_size=(img_height, img_width),
+    batch_size=batch_size,
+    class_mode='binary'
+)
+
+model = models.Sequential([
+    layers.Input(shape=(img_height, img_width, 3)),
+    layers.Conv2D(32, (3, 3), activation='relu'),
+    layers.BatchNormalization(),
+    layers.MaxPooling2D((2, 2)),
+    layers.Conv2D(64, (3, 3), activation='relu'),
+    layers.BatchNormalization(),
+    layers.MaxPooling2D((2, 2)),
+    layers.Conv2D(64, (3, 3), activation='relu'),
+    layers.BatchNormalization(),
+    layers.MaxPooling2D((2, 2)),
+    layers.Conv2D(128, (3, 3), activation='relu'),
+    layers.BatchNormalization(),
+    layers.MaxPooling2D((2, 2)),
+    layers.Flatten(),
+    layers.Dropout(0.5),
+    layers.Dense(512, activation='relu'),
+    layers.Dense(1, activation='sigmoid')
+])
+
+model.compile(
+    loss='binary_crossentropy',
+    optimizer='adam',
+    metrics=['accuracy']
+)
+
+reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=5, min_lr=0.001, verbose=1)
+early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True, verbose=1)
+
+checkpoint = ModelCheckpoint(
+    filepath='best_model_checkpoint.keras',
+    monitor='val_loss',
+    save_best_only=True,
+    verbose=1 
+)
+
+history = model.fit(
+    train_generator,
+    steps_per_epoch=train_generator.samples // batch_size,
+    epochs=20,  
+    validation_data=validation_generator,
+    validation_steps=validation_generator.samples // batch_size,
+    callbacks=[reduce_lr, early_stopping, checkpoint]
+)
+
+model.save('bon_methodazolla_classification_modelzero.keras')
